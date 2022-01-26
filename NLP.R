@@ -1,0 +1,34 @@
+library(dplyr) #data manipulation
+library(ggplot2) #visualizations
+library(gridExtra) #viewing multiple plots together
+library(tidytext) #text mining
+library(quanteda)
+library(tidyr)
+
+data <- read.csv("data/Rihanna.csv", na.strings = c("", "NA"))
+data$Album <- data$Album %>% replace_na("Single")
+
+
+
+data_clean <- data %>% drop_na()
+
+
+modify_contractions <- function(df){
+  df <- gsub("'re", " are", df)
+  df <- gsub("'m", " am", df)
+  df <- gsub("'d", " would", df)
+  df <- gsub("'ve", " have", df)
+  df <- gsub("let's", "let us", df) 
+  df <- gsub("'s", " is", df)
+  df <- gsub("can't", "can not", df)
+  df <- gsub("aren't","are not", df)
+  df <- gsub("'ll"," will", df)
+  df <- gsub("won't","will not", df)
+  df <- gsub("'ve"," have", df)
+  df <- gsub("n'","ng ", df)
+  df <- gsub("'cause","because", df)
+  df <- gsub("y'","you ", df)
+  df <- gsub("gonna","going to", df)
+  return(df)
+}
+data_clean$Lyric <- sapply(data_clean$Lyric, modify_contractions)
