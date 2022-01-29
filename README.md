@@ -1,2 +1,3 @@
 # IntelligentSystems-NLP
-Natural Language Processing applied to Rihanna discography
+Sentiment Analysis applied to Rihanna discography.
+Download R script and "data" folder, and run the code.
