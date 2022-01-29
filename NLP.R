@@ -1,22 +1,25 @@
-library(dplyr) #data manipulation
-library(ggplot2) #visualizations
-library(gridExtra) #viewing multiple plots together
-library(tidytext) #text mining
+library(dplyr)
+library(ggplot2) 
+library(gridExtra) 
+library(tidytext) 
 library(quanteda)
 library("quanteda.sentiment")
 library("quanteda.textplots")
 library("quanteda.textstats")
 library(tidyr)
 
+#Data reading and cleaning
 data <- read.csv("data/Rihanna.csv", na.strings = c("", "NA"), encoding = "UTF-8")
 data$X <- NULL
 data$Artist <- NULL
+#Establishing single albums for instances with NA values in Album column
 data$Album <- data$Album %>% replace_na("Single")
 data$Lyric <- trimws(data$Lyric)
 
 data_clean <- data %>% drop_na()
 data_clean$Lyric <- trimws(data_clean$Lyric)
 
+#Transforming contractions found
 modify_contractions <- function(df){
   df <- gsub("'re", " are", df)
   df <- gsub("'m", " am", df)
@@ -41,78 +44,72 @@ data_clean$Lyric <- sapply(data_clean$Lyric, modify_contractions)
 specialChars <- function(x) gsub("[^a-zA-Z0-9 ]", " ", x)
 data_clean$Lyric <- sapply(data_clean$Lyric, specialChars)
 
-############
-corpus <- corpus(data_clean$Lyric)
+#2.1 Most used words without removing stop words and special words
+corpus <- corpus(data_clean, text_field = "Lyric")
 dfm1 <- dfm(tokens(corpus))
 topfeatures(dfm1)
 
-words_to_remove <- c("rihanna","ya", "t", "hey", "eh", "da", "oh","ya","pre","da","la","uh" )
+#2.1 Most used words removing stop words and special word
+words_to_remove <- c("rihanna","ya", "t", "hey", "eh", "da", "oh","ya","pre","da","la","uh","aingt" )
 dfm2 <- dfm1 %>% dfm_remove(stopwords("en")) %>% dfm_remove(words_to_remove)
 topfeatures(dfm2, n=100)
 
 dfm_trim1<-dfm_trim(dfm2, min_termfreq = 10, verbose = FALSE)
 set.seed(100)
+#Plots displaying most used words in full discography
 textplot_wordcloud(dfm_trim1)
 textplot_wordcloud(dfm_trim1, max_words = 75)
 
-################
-features_dfm_inaug <- textstat_frequency(dfm2, n = 100)
-features_dfm_inaug$feature <- with(features_dfm_inaug, reorder(feature, -frequency))
-ggplot(features_dfm_inaug, aes(x = feature, y = frequency)) +
+#Output showing most used words by album
+toks=tokens(corpus)
+dftop_by_album <- dfm(toks)
+dftop_by_album <- dftop_by_album %>% dfm_remove(stopwords("en")) %>% dfm_remove(words_to_remove)
+top_words_by_album<-topfeatures(dftop_by_album, groups = Album)
+top_words_by_album
+
+#2.2 Frequency of words
+features_dfm <- textstat_frequency(dfm2, n = 100)
+features_dfm$feature <- with(features_dfm, reorder(feature, -frequency))
+ggplot(features_dfm, aes(x = feature, y = frequency)) +
   geom_point() + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
-##################
 
-
-##################################
-corpus365 = corpus(data_clean, text_field = "Lyric")
-toks=tokens(corpus365)
-dfmat_gov_lsd <- dfm(toks)
-dfmat_gov_lsd <- dfm_remove(dfmat_gov_lsd, stopwords("en"))
-dfmat_gov_lsd <- dfm_remove(dfmat_gov_lsd, words_to_remove)
-top_words_by_album<-topfeatures(dfmat_gov_lsd, groups = Album)
-ggplot(top_words_by_album, aes(x = feature))
-#####################
-afinn <- read.delim(system.file("extdata/afinn/AFINN-111.txt", 
-                                package = "quanteda.sentiment"),
-                    header = FALSE, col.names = c("word", "valence"))
-head(afinn)
-data_dictionary_afinn <- dictionary(list(afinn = afinn$word))
-
-corpus365 = corpus(data_clean, text_field = "Lyric")
+#2.3 Sentiment Analysis
+corpus_sent_by_album = corpus(data_clean, text_field = "Lyric")
 docid <- paste(data_clean$Album)
-docnames(corpus365) <- docid
-corpus365
-toks=tokens(corpus365)
-toks_gov_lsd <- tokens_lookup(toks, dictionary = data_dictionary_AFINN)
-print(toks_gov_lsd)
-dfmat_gov_lsd <- dfm(toks_gov_lsd)
-dfmat_gov_lsd <- dfm_remove(dfmat_gov_lsd, stopwords("en"))
-dfmat_gov_lsd <- dfm_remove(dfmat_gov_lsd, words_to_remove)
-dict_output <- convert(dfmat_gov_lsd, to = "data.frame")
-dict_output$doc_id <- dfmat_gov_lsd@docvars[["Album"]]
-sum <- data.frame(aggregate(afinn ~ doc_id, dict_output, sum))
-sum <- sum[order(sum$afinn, decreasing = TRUE),]
-ggplot(data = head(sum,15), aes(x = doc_id, y = afinn)) +
+docnames(corpus_sent_by_album) <- docid
+toks=tokens(corpus_sent_by_album)
+#Using AFINN dictionary
+toks_sent_by_album <- tokens_lookup(toks, dictionary = data_dictionary_AFINN)
+dfsent_by_album <- dfm(toks_sent_by_album)
+dfsent_by_album <- dfsent_by_album %>% dfm_remove(stopwords("en")) %>% dfm_remove(words_to_remove)
+dict_output_by_album <- convert(dfsent_by_album, to = "data.frame")
+dict_output_by_album$doc_id <- dfsent_by_album@docvars[["Album"]]
+#Grouping by Album and combining scores
+sum_by_album <- data.frame(aggregate(afinn ~ doc_id, dict_output_by_album, sum))
+sum_by_album <- sum_by_album[order(sum_by_album$afinn, decreasing = TRUE),]
+#Plot of 10 best scores grouped by album
+ggplot(data = head(sum_by_album,10), aes(x = doc_id, y = afinn)) +
+  geom_point()
+#Plot of 30 best scores grouped by album
+ggplot(data = head(sum_by_album,10), aes(x = doc_id, y = afinn)) +
   geom_point()
 
 
-#########################
-corpus365 = corpus(data_clean, text_field = "Lyric")
-corpus365
+#Sentiment Analysis grouping by title
+corpus_sent_by_title = corpus(data_clean, text_field = "Lyric")
 docid <- paste(data_clean$Title)
-docid
-docnames(corpus365) <- docid
-corpus365
-toks=tokens(corpus365)
-toks_gov_lsd <- tokens_lookup(toks, dictionary = data_dictionary_AFINN)
-dfmat_gov_lsd <- dfm(toks_gov_lsd)
-print(dfmat_gov_lsd)
-dfmat_gov_lsd <- dfm_remove(dfmat_gov_lsd, stopwords("en"))
-dfmat_gov_lsd <- dfm_remove(dfmat_gov_lsd, words_to_remove)
-dict_output <- convert(dfmat_gov_lsd, to = "data.frame")
-sum <- dict_output[order(dict_output$afinn, decreasing = TRUE),]
-ggplot(data = head(sum,15), aes(x = doc_id, y = afinn)) + ylim(0,250)+
+docnames(corpus_sent_by_title) <- docid
+toks=tokens(corpus_sent_by_title)
+toks_sent_by_title <- tokens_lookup(toks, dictionary = data_dictionary_AFINN)
+dfsent_by_title <- dfm(toks_sent_by_title)
+dfsent_by_title <- dfsent_by_title %>% dfm_remove(stopwords("en")) %>% dfm_remove(words_to_remove)
+dict_output_by_title <- convert(dfsent_by_title, to = "data.frame")
+#Grouping by title
+sum_by_title <- dict_output_by_title[order(dict_output_by_title$afinn, decreasing = TRUE),]
+#Plot of 10 best scores by song
+ggplot(data = head(sum_by_title,10), aes(x = doc_id, y = afinn)) + ylim(0,250)+
   geom_point()
-##############
-
+#Plot of 10 best scores by song
+ggplot(data = head(sum_by_title,30), aes(x = doc_id, y = afinn)) + ylim(0,250)+
+  geom_point()
