@@ -126,13 +126,13 @@ dfsent_by_album <- dfm(toks_sent_by_album)
 dfsent_by_album <- dfsent_by_album %>% dfm_remove(stopwords("en")) %>% dfm_remove(words_to_remove)
 dict_output_by_album <- convert(dfsent_by_album, to = "data.frame")
 dict_output_by_album$doc_id <- dfsent_by_album@docvars[["Album"]]
-#Grouping by Album and combining scores
+#Grouping by Album combining scores
 sum_by_album <- data.frame(aggregate(afinn ~ doc_id, dict_output_by_album, sum))
 sum_by_album <- sum_by_album[order(sum_by_album$afinn, decreasing = TRUE),]
-#Plot of 10 best scores grouped by album
+#Plot of 5 best scores grouped by album
 ggplot(data = head(sum_by_album,5), aes(x = doc_id, y = afinn)) +
   geom_point()
-#Plot of 30 best scores grouped by album
+#Plot of 10 best scores grouped by album
 ggplot(data = head(sum_by_album,10), aes(x = doc_id, y = afinn)) +
   geom_point()
 ```
@@ -151,7 +151,7 @@ dfsent_by_title <- dfsent_by_title %>% dfm_remove(stopwords("en")) %>% dfm_remov
 dict_output_by_title <- convert(dfsent_by_title, to = "data.frame")
 #Grouping by title
 sum_by_title <- dict_output_by_title[order(dict_output_by_title$afinn, decreasing = TRUE),]
-#Plot of 10 best scores by song
+#Plot of 5 best scores by song
 ggplot(data = head(sum_by_title,5), aes(x = doc_id, y = afinn)) + ylim(0,250)+
   geom_point()
 #Plot of 10 best scores by song
