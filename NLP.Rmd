@@ -86,8 +86,8 @@ topfeatures(dfm2, n=100)
 dfm_trim1<-dfm_trim(dfm2, min_termfreq = 10, verbose = FALSE)
 set.seed(100)
 #Plots displaying most used words in full discography
-textplot_wordcloud(dfm_trim1)
 textplot_wordcloud(dfm_trim1, max_words = 75)
+textplot_wordcloud(dfm_trim1)
 ```
 
 ### Most used words by album
@@ -130,7 +130,7 @@ dict_output_by_album$doc_id <- dfsent_by_album@docvars[["Album"]]
 sum_by_album <- data.frame(aggregate(afinn ~ doc_id, dict_output_by_album, sum))
 sum_by_album <- sum_by_album[order(sum_by_album$afinn, decreasing = TRUE),]
 #Plot of 10 best scores grouped by album
-ggplot(data = head(sum_by_album,10), aes(x = doc_id, y = afinn)) +
+ggplot(data = head(sum_by_album,5), aes(x = doc_id, y = afinn)) +
   geom_point()
 #Plot of 30 best scores grouped by album
 ggplot(data = head(sum_by_album,10), aes(x = doc_id, y = afinn)) +
@@ -139,7 +139,7 @@ ggplot(data = head(sum_by_album,10), aes(x = doc_id, y = afinn)) +
 
 ### Grouping by Title
 
-```{r sent analysis by album}
+```{r sent analysis by title}
 #Sentiment Analysis grouping by title
 corpus_sent_by_title = corpus(data_clean, text_field = "Lyric")
 docid <- paste(data_clean$Title)
@@ -152,9 +152,9 @@ dict_output_by_title <- convert(dfsent_by_title, to = "data.frame")
 #Grouping by title
 sum_by_title <- dict_output_by_title[order(dict_output_by_title$afinn, decreasing = TRUE),]
 #Plot of 10 best scores by song
-ggplot(data = head(sum_by_title,10), aes(x = doc_id, y = afinn)) + ylim(0,250)+
+ggplot(data = head(sum_by_title,5), aes(x = doc_id, y = afinn)) + ylim(0,250)+
   geom_point()
 #Plot of 10 best scores by song
-ggplot(data = head(sum_by_title,30), aes(x = doc_id, y = afinn)) + ylim(0,250)+
+ggplot(data = head(sum_by_title,10), aes(x = doc_id, y = afinn)) + ylim(0,250)+
   geom_point()
 ```
